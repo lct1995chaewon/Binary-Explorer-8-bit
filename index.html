@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Binary Explorer 8‑bit</title>
+<style>
+:root{
+  --bg:#f5f9ff;
+  --panel:#ffffff;
+  --accent:#1976d2;
+  --on:#fdd835;
+  --off:#d0d6e1;
+  --text:#222;
+  --muted:#555;
+}
+body{
+  font-family:"Noto Sans TC","Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  margin:0;
+  padding:20px;
+  text-align:center;
+}
+h1{color:var(--accent);margin-bottom:6px;}
+.sub{color:var(--muted);font-size:.95em;margin-bottom:10px;}
+
+.binary-board{
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  gap:16px;
+  flex-wrap:wrap;
+  margin:25px auto 30px;
+}
+.cell{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.bit{
+  width:65px;
+  height:80px;
+  line-height:80px;
+  font-size:32px;
+  font-weight:bold;
+  border-radius:10px;
+  border:2px solid var(--accent);
+  background:var(--off);
+  color:var(--accent);
+  cursor:pointer;
+  transition:.2s;
+  user-select:none;
+  margin-bottom:8px;
+}
+.bit.on{
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 0 8px #90caf9;
+}
+.lamp{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:var(--off);
+  border:2px solid #99a;
+  transition:background .3s;
+}
+.lamp.on{
+  background:var(--on);
+  box-shadow:0 0 10px var(--on);
+}
+.display{
+  background:var(--panel);
+  border-radius:10px;
+  box-shadow:0 4px 12px #0001;
+  text-align:left;
+  max-width:680px;
+  margin:0 auto 30px;
+  padding:20px;
+}
+.display h2{
+  color:var(--accent);
+  border-bottom:2px solid #e3f2fd;
+  padding-bottom:4px;
+}
+input{
+  width:100%;
+  padding:8px;
+  margin:4px 0;
+  font-size:16px;
+  border:1px solid #ccc;
+  border-radius:5px;
+}
+pre{
+  background:#f0f4f9;
+  color:#0d47a1;
+  padding:10px;
+  border-radius:6px;
+  font-family:"JetBrains Mono","Consolas",monospace;
+  font-size:0.9em;
+  overflow-x:auto;
+}
+footer{
+  margin-top:30px;
+  color:var(--muted);
+  font-size:0.9em;
+}
+@media (max-width:600px){
+  .bit{width:50px;height:65px;line-height:65px;font-size:26px;}
+  .lamp{width:30px;height:30px;}
+}
+</style>
+</head>
+
+<body>
+<h1>Binary Explorer 8‑bit</h1>
+<p class="sub">點擊位元切換 0 與 1 ，系統會即時計算十進與十六進數值並列出步驟。</p>
+
+<!-- 橫向排列的 bit + lamp -->
+<div class="binary-board" id="board"></div>
+
+<div class="display">
+  <h2>數值 Results</h2>
+  <label>十進 (Decimal)</label>
+  <input id="dec" readonly>
+  <label>十六進 (Hexadecimal)</label>
+  <input id="hex" readonly>
+
+  <h2>步驟 Steps</h2>
+  <pre id="steps">// 點擊上方任一位元開始計算</pre>
+</div>
+
+<footer>© 2025 Binary Explorer 8‑bit ｜ Design by lct1995chaewon × GPT‑5 Chat</footer>
+
+<script>
+const BIT_COUNT=8;
+let bits=new Array(BIT_COUNT).fill(0);
+const board=document.getElementById("board");
+
+// 建立 8 個「bit + lamp」橫向
+for(let i=0;i<BIT_COUNT;i++){
+  const cell=document.createElement("div");
+  cell.className="cell";
+  const bit=document.createElement("div");
+  bit.className="bit";
+  bit.textContent="0";
+  const lamp=document.createElement("div");
+  lamp.className="lamp";
+  bit.onclick=()=>toggle(i);
+  lamp.onclick=()=>toggle(i);
+  cell.appendChild(bit);
+  cell.appendChild(lamp);
+  board.appendChild(cell);
+}
+updateDisplay();
+
+function toggle(i){
+  bits[i]=bits[i]?0:1;
+  updateDisplay();
+}
+
+function updateDisplay(){
+  const bitDivs=document.querySelectorAll(".bit");
+  const lamps=document.querySelectorAll(".lamp");
+  for(let i=0;i<BIT_COUNT;i++){
+    bitDivs[i].textContent=bits[i];
+    bitDivs[i].classList.toggle("on",bits[i]===1);
+    lamps[i].classList.toggle("on",bits[i]===1);
+  }
+
+  // 十進與十六進
+  let dec=0;
+  for(let i=0;i<BIT_COUNT;i++) dec=dec*2+bits[i];
+  document.getElementById("dec").value=dec;
+  document.getElementById("hex").value=dec.toString(16).toUpperCase();
+
+  // 列式步驟
+  const lines=[];
+  lines.push("位權展開：");
+  const expand=[];
+  for(let i=BIT_COUNT-1;i>=0;i--){
+    expand.push(`${bits[BIT_COUNT-1-i]} × 2^${i}`);
+  }
+  lines.push(expand.join(" + "));
+  const values=[];
+  let total=0;
+  for(let i=BIT_COUNT-1;i>=0;i--){
+    const val=bits[BIT_COUNT-1-i]*Math.pow(2,i);
+    if(val>0) values.push(val);
+    total+=val;
+  }
+  lines.push(`= ${values.join(" + ")||0} = ${total}`);
+  lines.push("");
+  lines.push(`十進 = ${dec}`);
+  lines.push(`十六進 = ${dec.toString(16).toUpperCase()}`);
+  document.getElementById("steps").textContent=lines.join("\n");
+}
+</script>
+</body>
+</html>

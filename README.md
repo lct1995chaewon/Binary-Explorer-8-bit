@@ -11,8 +11,7 @@
 ---
 
 ## 🌐 Demo  
-🔗 **[https://lct1995chaewon.github.io/binary-explorer-8bit/](https://lct1995chaewon.github.io/binary-explorer-8bit/)**  
-
+🔗 https://lct1995chaewon.github.io/Binary-Explorer-8-bit/
 ---
 
 ## 🧩 介紹

@@ -1,201 +1,283 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Binary Explorer 8‑bit</title>
-<style>
-:root{
-  --bg:#f5f9ff;
-  --panel:#ffffff;
-  --accent:#1976d2;
-  --on:#fdd835;
-  --off:#d0d6e1;
-  --text:#222;
-  --muted:#555;
-}
-body{
-  font-family:"Noto Sans TC","Segoe UI",sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  margin:0;
-  padding:20px;
-  text-align:center;
-}
-h1{color:var(--accent);margin-bottom:6px;}
-.sub{color:var(--muted);font-size:.95em;margin-bottom:10px;}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8位元二補碼演示器 (簡潔Hex版)</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --accent-blue: #3498db;
+            --accent-red: #e74c3c;
+            --text-color: #2c3e50;
+            --gray-light: #ecf0f1;
+            --gray-text: #95a5a6;
+        }
 
-.binary-board{
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  gap:16px;
-  flex-wrap:wrap;
-  margin:25px auto 30px;
-}
-.cell{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
-.bit{
-  width:65px;
-  height:80px;
-  line-height:80px;
-  font-size:32px;
-  font-weight:bold;
-  border-radius:10px;
-  border:2px solid var(--accent);
-  background:var(--off);
-  color:var(--accent);
-  cursor:pointer;
-  transition:.2s;
-  user-select:none;
-  margin-bottom:8px;
-}
-.bit.on{
-  background:var(--accent);
-  color:#fff;
-  box-shadow:0 0 8px #90caf9;
-}
-.lamp{
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  background:var(--off);
-  border:2px solid #99a;
-  transition:background .3s;
-}
-.lamp.on{
-  background:var(--on);
-  box-shadow:0 0 10px var(--on);
-}
-.display{
-  background:var(--panel);
-  border-radius:10px;
-  box-shadow:0 4px 12px #0001;
-  text-align:left;
-  max-width:680px;
-  margin:0 auto 30px;
-  padding:20px;
-}
-.display h2{
-  color:var(--accent);
-  border-bottom:2px solid #e3f2fd;
-  padding-bottom:4px;
-}
-input{
-  width:100%;
-  padding:8px;
-  margin:4px 0;
-  font-size:16px;
-  border:1px solid #ccc;
-  border-radius:5px;
-}
-pre{
-  background:#f0f4f9;
-  color:#0d47a1;
-  padding:10px;
-  border-radius:6px;
-  font-family:"JetBrains Mono","Consolas",monospace;
-  font-size:0.9em;
-  overflow-x:auto;
-}
-footer{
-  margin-top:30px;
-  color:var(--muted);
-  font-size:0.9em;
-}
-@media (max-width:600px){
-  .bit{width:50px;height:65px;line-height:65px;font-size:26px;}
-  .lamp{width:30px;height:30px;}
-}
-</style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 95%;
+            max-width: 850px;
+            text-align: center;
+        }
+
+        h1 { margin: 0 0 10px 0; font-size: 1.5rem; }
+        p.subtitle { color: var(--gray-text); margin-bottom: 25px; font-size: 0.9rem; }
+
+        /* Dashboard for values */
+        .dashboard {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .dash-item {
+            background: var(--gray-light);
+            padding: 10px 20px;
+            border-radius: 8px;
+            min-width: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .dash-label { font-size: 0.8rem; color: var(--gray-text); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;}
+        .dash-value { font-family: 'Courier New', monospace; font-weight: bold; font-size: 1.2rem; }
+        
+        /* Decimal is special */
+        .dash-item.main-result { background: #e8f6f3; border: 2px solid #1abc9c; }
+        .dash-item.main-result .dash-value { font-size: 1.8rem; color: #16a085; }
+
+        /* Bits Container */
+        .bits-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .nibble-separator { width: 15px; }
+
+        .bit-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 45px;
+        }
+
+        .weight-label { font-size: 0.75rem; color: var(--gray-text); font-weight: bold; }
+        .weight-label.sign { color: var(--accent-red); }
+
+        /* The Button */
+        .bit-btn {
+            width: 45px;
+            height: 60px;
+            background-color: white;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            transition: all 0.15s;
+            user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .bit-btn[data-state="0"] { color: #bdc3c7; }
+        
+        .bit-btn[data-state="1"] {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        .bit-btn.sign-bit[data-state="1"] {
+            background-color: var(--accent-red);
+            border-color: var(--accent-red);
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+        }
+
+        /* Calculation Bar */
+        .calc-box {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            text-align: left;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .calc-hl-neg { color: #ff7675; font-weight: bold; }
+        .calc-hl-pos { color: #74b9ff; font-weight: bold; }
+        .calc-dim { color: #506375; }
+
+    </style>
 </head>
-
 <body>
-<h1>Binary Explorer 8‑bit</h1>
-<p class="sub">點擊位元切換 0 與 1 ，系統會即時計算十進與十六進數值並列出步驟。</p>
 
-<!-- 橫向排列的 bit + lamp -->
-<div class="binary-board" id="board"></div>
+<div class="container">
+    <h1>8位元二補碼演示器</h1>
+    <p class="subtitle">點擊開關設定 8-bit 數值 (-128 ~ +127)</p>
 
-<div class="display">
-  <h2>數值 Results</h2>
-  <label>十進 (Decimal)</label>
-  <input id="dec" readonly>
-  <label>十六進 (Hexadecimal)</label>
-  <input id="hex" readonly>
+    <div class="dashboard">
+        <div class="dash-item main-result">
+            <div class="dash-label">十進制 (Decimal)</div>
+            <div class="dash-value" id="decDisplay">0</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-label">十六進制 (Hex)</div>
+            <div class="dash-value" id="hexDisplay">00</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-label">二進制 (Binary)</div>
+            <div class="dash-value" id="binDisplay">0000 0000</div>
+        </div>
+    </div>
 
-  <h2>步驟 Steps</h2>
-  <pre id="steps">// 點擊上方任一位元開始計算</pre>
+    <div class="bits-row">
+        <div class="bit-wrapper">
+            <div class="weight-label sign">-128</div>
+            <div class="bit-btn sign-bit" id="btn7" onclick="toggle(7)" data-state="0">0</div>
+            <div class="weight-label">7</div>
+        </div>
+        <div class="bit-wrapper">
+            <div class="weight-label">64</div>
+            <div class="bit-btn" id="btn6" onclick="toggle(6)" data-state="0">0</div>
+            <div class="weight-label">6</div>
+        </div>
+        <div class="bit-wrapper">
+            <div class="weight-label">32</div>
+            <div class="bit-btn" id="btn5" onclick="toggle(5)" data-state="0">0</div>
+            <div class="weight-label">5</div>
+        </div>
+        <div class="bit-wrapper">
+            <div class="weight-label">16</div>
+            <div class="bit-btn" id="btn4" onclick="toggle(4)" data-state="0">0</div>
+            <div class="weight-label">4</div>
+        </div>
+
+        <div class="nibble-separator"></div>
+
+        <div class="bit-wrapper">
+            <div class="weight-label">8</div>
+            <div class="bit-btn" id="btn3" onclick="toggle(3)" data-state="0">0</div>
+            <div class="weight-label">3</div>
+        </div>
+        <div class="bit-wrapper">
+            <div class="weight-label">4</div>
+            <div class="bit-btn" id="btn2" onclick="toggle(2)" data-state="0">0</div>
+            <div class="weight-label">2</div>
+        </div>
+        <div class="bit-wrapper">
+            <div class="weight-label">2</div>
+            <div class="bit-btn" id="btn1" onclick="toggle(1)" data-state="0">0</div>
+            <div class="weight-label">1</div>
+        </div>
+        <div class="bit-wrapper">
+            <div class="weight-label">1</div>
+            <div class="bit-btn" id="btn0" onclick="toggle(0)" data-state="0">0</div>
+            <div class="weight-label">0</div>
+        </div>
+    </div>
+
+    <div style="text-align: left; margin-bottom: 5px; font-size: 0.85rem; color: #7f8c8d; margin-left: 5px;">計算詳解 (負權重法):</div>
+    <div class="calc-box" id="calcDisplay">
+        0 = 0
+    </div>
 </div>
 
-<footer>© 2025 Binary Explorer 8‑bit ｜ Design by lct1995chaewon × GPT‑5 Chat</footer>
-
 <script>
-const BIT_COUNT=8;
-let bits=new Array(BIT_COUNT).fill(0);
-const board=document.getElementById("board");
+    let bits = [0,0,0,0, 0,0,0,0];
+    const weights = [1, 2, 4, 8, 16, 32, 64, -128];
 
-// 建立 8 個「bit + lamp」橫向
-for(let i=0;i<BIT_COUNT;i++){
-  const cell=document.createElement("div");
-  cell.className="cell";
-  const bit=document.createElement("div");
-  bit.className="bit";
-  bit.textContent="0";
-  const lamp=document.createElement("div");
-  lamp.className="lamp";
-  bit.onclick=()=>toggle(i);
-  lamp.onclick=()=>toggle(i);
-  cell.appendChild(bit);
-  cell.appendChild(lamp);
-  board.appendChild(cell);
-}
-updateDisplay();
+    function toggle(index) {
+        bits[index] = bits[index] === 0 ? 1 : 0;
+        update();
+    }
 
-function toggle(i){
-  bits[i]=bits[i]?0:1;
-  updateDisplay();
-}
+    function update() {
+        let total = 0;
+        for (let i = 0; i < 8; i++) {
+            if (bits[i] === 1) {
+                total += weights[i];
+            }
+        }
 
-function updateDisplay(){
-  const bitDivs=document.querySelectorAll(".bit");
-  const lamps=document.querySelectorAll(".lamp");
-  for(let i=0;i<BIT_COUNT;i++){
-    bitDivs[i].textContent=bits[i];
-    bitDivs[i].classList.toggle("on",bits[i]===1);
-    lamps[i].classList.toggle("on",bits[i]===1);
-  }
+        // Update Buttons
+        for (let i = 0; i < 8; i++) {
+            const btn = document.getElementById(`btn${i}`);
+            btn.innerText = bits[i];
+            btn.setAttribute('data-state', bits[i]);
+        }
 
-  // 十進與十六進
-  let dec=0;
-  for(let i=0;i<BIT_COUNT;i++) dec=dec*2+bits[i];
-  document.getElementById("dec").value=dec;
-  document.getElementById("hex").value=dec.toString(16).toUpperCase();
+        // Decimal
+        const decDisplay = document.getElementById('decDisplay');
+        decDisplay.innerText = total;
+        decDisplay.style.color = total < 0 ? '#e74c3c' : '#16a085';
 
-  // 列式步驟
-  const lines=[];
-  lines.push("位權展開：");
-  const expand=[];
-  for(let i=BIT_COUNT-1;i>=0;i--){
-    expand.push(`${bits[BIT_COUNT-1-i]} × 2^${i}`);
-  }
-  lines.push(expand.join(" + "));
-  const values=[];
-  let total=0;
-  for(let i=BIT_COUNT-1;i>=0;i--){
-    const val=bits[BIT_COUNT-1-i]*Math.pow(2,i);
-    if(val>0) values.push(val);
-    total+=val;
-  }
-  lines.push(`= ${values.join(" + ")||0} = ${total}`);
-  lines.push("");
-  lines.push(`十進 = ${dec}`);
-  lines.push(`十六進 = ${dec.toString(16).toUpperCase()}`);
-  document.getElementById("steps").textContent=lines.join("\n");
-}
+        // Hex (Changed: Removed "0x" prefix)
+        // (total & 0xFF) ensures we treat the number as an unsigned 8-bit byte for display
+        // e.g., -1 becomes 255 -> FF
+        let hexString = (total & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('hexDisplay').innerText = hexString;
+
+        // Binary
+        let binString = "";
+        for (let i = 7; i >= 0; i--) {
+            binString += bits[i];
+            if (i === 4) binString += " ";
+        }
+        document.getElementById('binDisplay').innerText = binString;
+
+        // Calculation Visual
+        let components = [];
+        if (bits[7] === 1) {
+            components.push(`<span class="calc-hl-neg">(-128)</span>`);
+        } else {
+            components.push(`<span class="calc-dim">0</span>`);
+        }
+
+        for (let i = 6; i >= 0; i--) {
+            if (bits[i] === 1) {
+                components.push(`<span class="calc-hl-pos">${weights[i]}</span>`);
+            } else {
+                components.push(`<span class="calc-dim">0</span>`);
+            }
+        }
+
+        document.getElementById('calcDisplay').innerHTML = 
+            components.join(" + ") + ` = <span style="color:white; font-weight:bold">${total}</span>`;
+    }
+
+    update();
 </script>
+
 </body>
 </html>
